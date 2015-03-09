@@ -83,7 +83,6 @@ let rec gen ty =
       let case cd =
         let c = Ident.name cd.cd_id in
         let qc = prefix ^ c in
-#if OCAML_VERSION >= (4, 03, 00)
         match cd.cd_args with
         | Cstr_tuple (tys) ->
           let p, args = gentuple env tys in
@@ -93,10 +92,6 @@ let rec gen ty =
           pconstr qc [Pat.record (List.map fst l) Closed],
           selfcall "constr" [str ty; tuple [str c;
             selfcall "record" [str (ty ^ "." ^ c); list (List.map snd l)]]]
-#else
-        let p, args = gentuple env cd.cd_args in
-        pconstr qc p, selfcall "constr" [str ty; tuple[str c; list args]]
-#endif
       in
       concrete (func (List.map case l))
   | Type_abstract, Some t ->

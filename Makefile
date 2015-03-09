@@ -8,12 +8,10 @@ PACKAGE = ppx_tools
 VERSION = 0.99
 # Don't forget to change META file as well
 
-CPPO      = cppo
 OCAML     = ocaml
 OCAMLC    = ocamlc
 OCAMLOPT  = ocamlopt
-COMPFLAGS = -w +A-4-17-44-45 -I +compiler-libs -safe-string \
-						-pp '$(CPPO) -V OCAML:$(OCAML_VERSION)'
+COMPFLAGS = -w +A-4-17-44-45 -I +compiler-libs -safe-string
 
 OCAML_VERSION := $(shell $(OCAML) -vnum)
 
@@ -116,5 +114,3 @@ package: clean
 TARGET=foo:bar/ppx_tools_data
 upload:
 	scp $(FPACKAGE).tar.gz $(TARGET)/
-
-
