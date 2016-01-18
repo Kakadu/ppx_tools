@@ -29,9 +29,11 @@ class mapper:
     method include_description: include_description -> include_description
     method label_declaration: label_declaration -> label_declaration
     method location: Location.t -> Location.t
+    method module_argument : module_argument -> module_argument
     method module_binding: module_binding -> module_binding
     method module_declaration: module_declaration -> module_declaration
     method module_expr: module_expr -> module_expr
+    method module_parameter : module_parameter -> module_parameter
     method module_type: module_type -> module_type
     method module_type_declaration: module_type_declaration -> module_type_declaration
     method open_description: open_description -> open_description

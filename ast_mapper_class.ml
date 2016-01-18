@@ -150,10 +150,10 @@ module MT = struct
     | Pmty_ident s -> ident ~loc ~attrs (map_loc sub s)
     | Pmty_alias s -> alias ~loc ~attrs (map_loc sub s)
     | Pmty_signature sg -> signature ~loc ~attrs (sub # signature sg)
-    | Pmty_functor (s, mt1, mt2) ->
-        functor_ ~loc ~attrs (map_loc sub s)
-          (map_opt (sub # module_type) mt1)
-          (sub # module_type mt2)
+    | Pmty_functor (mparam, mt) ->
+        functor_ ~loc ~attrs
+          (sub # module_parameter mparam)
+          (sub # module_type mt)
     | Pmty_with (mt, l) ->
         with_ ~loc ~attrs (sub # module_type mt)
               (List.map (sub # with_constraint) l)
@@ -191,6 +191,25 @@ module MT = struct
     | Psig_attribute x -> attribute ~loc (sub # attribute x)
 end
 
+module MP = struct
+  (* module_parameter type mappers *)
+
+  let map sub = function
+    | Pmpar_generative -> Pmpar_generative
+    | Pmpar_applicative (loc, mty) ->
+       Pmpar_applicative (map_loc sub loc, sub # module_type mty)
+    | Pmpar_implicit (loc, mty) ->
+       Pmpar_implicit (map_loc sub loc, sub # module_type mty)
+end
+
+module MA = struct
+  (* module arguements *)
+
+  let map sub = function
+    | Pmarg_generative -> Pmarg_generative
+    | Pmarg_applicative me -> Pmarg_applicative (sub # module_expr me)
+    | Pmarg_implicit me -> Pmarg_implicit (sub # module_expr me)
+end
 
 module M = struct
   (* Value expressions for the module language *)
@@ -202,12 +221,12 @@ module M = struct
     match desc with
     | Pmod_ident x -> ident ~loc ~attrs (map_loc sub x)
     | Pmod_structure str -> structure ~loc ~attrs (sub # structure str)
-    | Pmod_functor (arg, arg_ty, body) ->
-        functor_ ~loc ~attrs (map_loc sub arg)
-          (map_opt (sub # module_type) arg_ty)
+    | Pmod_functor (mparam, body) ->
+        functor_ ~loc ~attrs
+          (sub # module_parameter mparam)
           (sub # module_expr body)
-    | Pmod_apply (m1, m2) ->
-        apply ~loc ~attrs (sub # module_expr m1) (sub # module_expr m2)
+    | Pmod_apply (m1, marg) ->
+        apply ~loc ~attrs (sub # module_expr m1) (sub # module_argument marg)
     | Pmod_constraint (m, mty) ->
         constraint_ ~loc ~attrs (sub # module_expr m) (sub # module_type mty)
     | Pmod_unpack e -> unpack ~loc ~attrs (sub # expr e)
@@ -290,8 +309,8 @@ module E = struct
     | Pexp_override sel ->
         override ~loc ~attrs
                  (List.map (map_tuple (map_loc sub) (sub # expr)) sel)
-    | Pexp_letmodule (s, me, e) ->
-        letmodule ~loc ~attrs (map_loc sub s) (sub # module_expr me)
+    | Pexp_letmodule (mb, e) ->
+        letmodule ~loc ~attrs (sub # module_binding mb)
                   (sub # expr e)
     | Pexp_assert e -> assert_ ~loc ~attrs (sub # expr e)
     | Pexp_lazy e -> lazy_ ~loc ~attrs (sub # expr e)
@@ -407,6 +426,9 @@ class mapper =
     method structure_item si = M.map_structure_item this si
     method module_expr = M.map this
 
+    method module_parameter = MP.map this
+    method module_argument  = MA.map this
+
     method signature l = List.map (this # signature_item) l
     method signature_item si = MT.map_signature_item this si
     method module_type = MT.map this
@@ -443,10 +465,11 @@ class mapper =
     method pat = P.map this
     method expr = E.map this
 
-    method module_declaration {pmd_name; pmd_type; pmd_attributes; pmd_loc} =
+    method module_declaration {pmd_name; pmd_type; pmd_attributes; pmd_loc; pmd_implicit} =
       Md.mk
         (map_loc this pmd_name)
         (this # module_type pmd_type)
+        ~implicit_:pmd_implicit   (* TODO: kakadu: Not sure should we call some function there *)
         ~attrs:(this # attributes pmd_attributes)
         ~loc:(this # location pmd_loc)
 
@@ -457,8 +480,9 @@ class mapper =
         ~attrs:(this # attributes pmtd_attributes)
         ~loc:(this # location pmtd_loc)
 
-    method module_binding {pmb_name; pmb_expr; pmb_attributes; pmb_loc} =
+    method module_binding {pmb_name; pmb_expr; pmb_attributes; pmb_loc; pmb_implicit} =
       Mb.mk (map_loc this pmb_name) (this # module_expr pmb_expr)
+        ~implicit_:pmb_implicit
         ~attrs:(this # attributes pmb_attributes)
         ~loc:(this # location pmb_loc)
 
@@ -498,9 +522,9 @@ class mapper =
     }
 
     method open_description
-        {popen_lid; popen_override; popen_attributes; popen_loc} =
+        {popen_lid; popen_flag; popen_attributes; popen_loc} =
       Opn.mk (map_loc this popen_lid)
-        ~override:popen_override
+        ~flag:popen_flag
         ~loc:(this # location popen_loc)
         ~attrs:(this # attributes popen_attributes)
 
