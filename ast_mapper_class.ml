@@ -198,8 +198,8 @@ module MP = struct
     | Pmpar_generative -> Pmpar_generative
     | Pmpar_applicative (loc, mty) ->
        Pmpar_applicative (map_loc sub loc, sub # module_type mty)
-    | Pmpar_implicit (loc, mty) ->
-       Pmpar_implicit (map_loc sub loc, sub # module_type mty)
+    | Pmpar_implicit (virt_flag, loc, mty) ->
+       Pmpar_implicit (virt_flag, map_loc sub loc, sub # module_type mty)
 end
 
 module MA = struct
